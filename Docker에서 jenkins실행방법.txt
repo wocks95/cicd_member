@@ -1,0 +1,108 @@
+
+Jenkins Pipeline 프로젝트
+
+0. aws에서 새로 인스턴스 만들기 (탄력적 IP 활용하기)
+
+1. sts4에서 구현한 프로젝트의 
+application.properties에서 spring.datasource.url에서
+# environment variable (docker run -e MYSQL_IP=3.105.240.39 ...)
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.url=jdbc:mysql://${MYSQL_IP}:${MYSQL_PORT}/${MYSQL_DATABASE}
+spring.datasource.username=${MYSQL_USERNAME}
+spring.datasource.password=${MYSQL_PASSWORD}
+
+# mybatis Setting
+mybatis.configuration.map-underscore-to-camel-case=true
+mybatis.mapper-locations=mappers/*.xml
+mybatis.type-aliases-package=com.min.memberapp.model.dto
+적기
+
+2.GitHub에 push하기
+
+3.ubuntu인 모바일xterm에서 인스턴스 ip주소에 맞게 새로 만들기(키 페어 필요)
+
+4. 
+$ sudo apt update
+↓
+$ sudo apt install -y curl
+↓
+$ curl -s https://get.docker.com | sudo sh
+↓
+$ sudo usermod -aG docker $USER
+↓
+$ newgrp docker
+↓
+$ mkdir mysql
+↓
+$ sudo chown root mysql
+$ sudo chgrp root mysql
+↓
+$ sudo vi ~/mysql/my.cnf
+[client]
+default-character-set = utf8mb4
+[mysql]
+default-character-set = utf8mb4
+[mysqldump]
+default-character-set = utf8mb4
+[mysqld]
+init_connect = 'SET collation_connection = utf8_general_ci'
+init_connect = 'SET NAMES utf8'
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+skip-character-set-client-handshake
+-------------------------------------------------------------
+↓
+$ docker volume create mysql-vol
+↓
+$ docker run -d --name cicd_mysql_container \
+> --restart=always \ 
+> -p 3306:3306 \ 
+> -v ~/mysql:/etc/mysql/conf.d \
+> -v mysql-vol:/var/lib/mysql \
+> wocks95/cicd_db_script:1.0
+↓
+$ docker exec -it cicd_mysql_container bash
+↓
+# mysql -uroot -p
+↓
+mysql> status
+↓ 
+exit
+↓
+새로 만든 서버를 워크벤치에서 열어서 확인하고
+GRANT ALL PRIVILEGES ON *.* TO 'greenit'@'%'; <<greenit 권한 주기
+↓
+해당 서버 설정에서 username : 을 root 로 써져있는지 확인할 것
+만약에 greenit에 권한을 못 준다면 
+DROP USER 'greenit'@'%';
+CREATE USER 'greenit'@'%' IDENTIFIED BY 'greenit';
+하지만 매우 위험하니 되도록이면 사용하지 말것
+↓
+$ sudo apt install -y openjdk-17-jdk
+↓
+$ java -version 버전 확인하기
+↓
+$ vi .profile
+#JAVA_HOME
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+export PATH=$JAVA_HOME/bin:$PATH
+---------------------------------------------------
+↓
+$ source .profile
+↓
+https://get.jenkins.io/war-stable/2.479.3/jenkins.war 
+ ㄴjenkins 홈페이지 다운로드 하는 부분을 링크 주소 복사한 것
+$  wget --no-check-certificate https://get.jenkins.io/war-stable/2.479.3/jenkins.war
+↓
+$ java -jar jenkins.war --httpPort=8080 
+이후에는 가상서버에는 jenkins만 돌아가고 프롬포트는 돌지 않는다.
+↓
+~/jenkins.war
+~/.jenkins
+~/.jenkins/secrets/initialAdminPassword # 초기 비밀번호가 나오는데
+웹 페이지 주소 창에서 ip주소:8080을 검색해서 초기 비밀번호를 입력함
+↓
+install suggested plugins 클릭
+↓
+설치가 완료되면 회원가입 진행하기
+
